@@ -2,4 +2,4 @@ version1.o
 date:20200319
 create new repository
 add one test
-debug test
+debug test 1
