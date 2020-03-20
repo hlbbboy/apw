@@ -4,3 +4,4 @@ create a new repository
 add one test
 debug test one
 pull conflict 1
+GUI test
