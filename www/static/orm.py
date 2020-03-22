@@ -28,7 +28,7 @@ async def select(sql, args, size=None):
     log(sql, args)
     global __pool
     async with __pool.get() as conn:
-        #cur = await conn.cursor(aiomysql.DictCursor)
+        #cur = await conn.cursor(aiomysql.DictCursor) #aiomysql.DictCursor 返回列表的元素是dict
         async with conn.cursor(aiomysql.DictCursor) as cur:
             await cur.execute(sql.replace('?', '%s'), args or ())
             if size:
@@ -70,32 +70,7 @@ class User(Model):
     name = StringField(name = 'name') 
 """    
     
-class Model(dict, metaclass=ModelMetaclass):
-    
-    def __init__(self, **kw):
-        super(Model, self).__init__(**kw)
 
-    def __getattr__(self, key):
-        try:
-            return self[key]
-         except KeyError:
-            raise AttributeError(r"'Model' object has no attribute '%s'" % key)
-     
-     def __setattr__(self, key, value):
-        self[key] = value
-        
-     def getValue(self, key):
-        return getattr(self, key, None)
-        
-    def getValueOrDefault(self, key):
-        value = getattr(self, key, None)
-        if value is None:
-            field = self.__mappings__[key]
-            if field.default is not None:
-                value = field.default() if callable(field.default) else field.default
-                logging.debug('using default value for %s: %s' % (key, str(value))
-        return value 
-        
 class Field(object):
     
     def __init__(self, name, column_type, primary_key, default):
@@ -114,9 +89,25 @@ class StringField(Field):
         
 class IntegerField(Field):
 
-    def __init__(self, name=None, ddl='bigint', primary_key=False, default=None):
+    def __init__(self, name=None, ddl='bigint', primary_key=False, default=0):
         super().__init__(name, ddl, primary_key, default)
         
+class BooleanField(Field):
+    
+    def __init__(self, name=None,  default=False):
+        super().__init__(name, 'boolean', False, default)
+
+class FloatField(Field):
+    
+    def __init__(self, name=None, ddl='real', primary_key=False, default=0.0):
+        super().__init__(name, ddl, primary_key, default)
+        
+class TextField(Field):
+
+    def __init__(self, name=None, primary_key=False. default=None)
+        super().__init__(name, 'text', primary_key, default)
+    
+
 class ModelMetaclass(type):
 
     def __new__(cls, name, base, attrs):
@@ -147,9 +138,98 @@ class ModelMetaclass(type):
         attrs['__primary_key__'] = primaryKey
         attrs['__fields__'] = fields
         attrs['__select__'] = 'select `%s`, %s from `%s`' % (primaryKey, ', '.join(escape_fields), tableName)#这里要测试一下`符号的作用
-        attrs['__insert__'] = 'insert into `%s` (%s, `%s`) values (%s)' % (tableName, ', 'join(escape_fields), primaryKey, create_args_string(len(escape_fields)+1))
+        attrs['__insert__'] = 'insert into `%s` (%s, `%s`) values (%s)' % (tableName, ', 'join(escape_fields), primaryKey, create_args_string(len(escape_fields)+1)) #create_args_string this method is going to add '?' to the sql
         attrs['__update__'] = 'update `%s` set %s where %s = ?' % (tableName, ', '.join(map(lambda f: '`%s` = ?' % (mappings.get(f).name or f),fields)), primaryKey)
         attrs['__delete__'] = 'delete from `%s` where `%s` = ?' % (tableName, primaryKey)
         return type.__new__(cls, name, bases, attrs)
         
+class Model(dict, metaclass=ModelMetaclass):
+    
+    def __init__(self, **kw):
+        super(Model, self).__init__(**kw)
+
+    def __getattr__(self, key):
+        try:
+            return self[key]
+         except KeyError:
+            raise AttributeError(r"'Model' object has no attribute '%s'" % key)
+     
+     def __setattr__(self, key, value):
+        self[key] = value
         
+     def getValue(self, key):
+        return getattr(self, key, None)
+        
+    def getValueOrDefault(self, key):
+        value = getattr(self, key, None)
+        if value is None:
+            field = self.__mappings__[key]
+            if field.default is not None:
+                value = field.default() if callable(field.default) else field.default
+                logging.debug('using default value for %s: %s' % (key, str(value))
+        return value 
+        
+    @classmethod
+    async def findAll(cls, where=None, args=None, **kw): #args is for sql 'sql, args', kw has the value and args name. 
+        sql = [cls.__select__]
+        if where:
+            sql.append('where')
+            sql.append(where)
+        if args is None:
+            args = []
+        orderby = kw.get('orderby',None)
+        if orderby:
+            sql.append('orderby')
+            sql.append(orderby)
+        limit = kw.get('limit', None)
+        if limit:
+            sql.append('limit')
+            if isinstance(limit, int):
+                sql.append('?')
+                args.append(limit) #这里不可以直接把limit给sql，因为参数之间用‘，’号连接，其他sql用‘  ’空格连接，不能用join完成
+            elif isinstance(limit, tuple) and len(limit == 2):
+                sql.append('?, ?')
+                args.extend(limit)
+            else:
+                raise ValueError('Invalid limit value: %s' % str(limit))
+        rs = 'await select( '.join(sql), args)
+        #rs是list，元素是dict，下边把dict赋给cls实例化数据后返回，相当于User（id......）
+        return [cls(**r) for r in rs]
+        
+    @classmethod
+    async def findNumber(cls, selectField, where=None, args=None):
+        sql = 'select %s _num_ from `%s`' % (selectField, cls.__table__)
+        if where:
+            sql.append('where')
+            sql.append(where)
+        rs = await select(' '.join(sql), args, 1)
+        if len(rs)==0:
+            return None
+        return rs[0]['_num_']
+        
+    @classmethod
+    async def find(cls, pk):
+        rs = await select('%s where `%s`=?' % (cls.__select__, cls.__primary_key__), [kw], 1)
+        if len(rs)!=1:
+            return None
+        return cls(**r[0])
+        
+    async def save(self):
+        args = list(map(self.getValueOrDefault, self.__fields__)
+        args.append(self.getValueOrDefault(__primary_key__))
+        rows = await execute(self.__insert__, args)
+        if rows !=1:
+            logging.warning('fail to insert record: affected rows: %s' % rows)
+    
+    async def update(self):
+        args = list(map(self.getValue, self.__fields__)
+        args.append(self.getValue(self.__primary_key__))
+        rows = await execute(self.__update__, args)
+        if rows != 1:
+            logging.warning('fail to update by primary key: affected rows: %s' % rows)
+    
+    async def remove(self):
+        args = self.getValue(self.__primary_key__)
+        rows = await execute(self.__delete__, args)
+        if rows != 1:
+            logging.warning('fail to delete by primary key: affected rows: %s' %rows)
