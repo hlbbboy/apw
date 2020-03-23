@@ -104,13 +104,13 @@ class FloatField(Field):
         
 class TextField(Field):
 
-    def __init__(self, name=None, primary_key=False. default=None)
+    def __init__(self, name=None, primary_key=False, default=None):
         super().__init__(name, 'text', primary_key, default)
     
 
 class ModelMetaclass(type):
 
-    def __new__(cls, name, base, attrs):
+    def __new__(cls, name, bases, attrs):
         if name == 'Model':
             return type.__new__(cls, name, bases, attrs)
         tableName = attrs.get('__table__', None) or name
@@ -138,7 +138,7 @@ class ModelMetaclass(type):
         attrs['__primary_key__'] = primaryKey
         attrs['__fields__'] = fields
         attrs['__select__'] = 'select `%s`, %s from `%s`' % (primaryKey, ', '.join(escape_fields), tableName)#这里要测试一下`符号的作用
-        attrs['__insert__'] = 'insert into `%s` (%s, `%s`) values (%s)' % (tableName, ', 'join(escape_fields), primaryKey, create_args_string(len(escape_fields)+1)) #create_args_string this method is going to add '?' to the sql
+        attrs['__insert__'] = 'insert into `%s` (%s, `%s`) values (%s)' % (tableName, ', '.join(escape_fields), primaryKey, create_args_string(len(escape_fields) + 1)) #create_args_string this method is going to add '?' to the sql
         attrs['__update__'] = 'update `%s` set %s where %s = ?' % (tableName, ', '.join(map(lambda f: '`%s` = ?' % (mappings.get(f).name or f),fields)), primaryKey)
         attrs['__delete__'] = 'delete from `%s` where `%s` = ?' % (tableName, primaryKey)
         return type.__new__(cls, name, bases, attrs)
@@ -151,13 +151,13 @@ class Model(dict, metaclass=ModelMetaclass):
     def __getattr__(self, key):
         try:
             return self[key]
-         except KeyError:
+        except KeyError:
             raise AttributeError(r"'Model' object has no attribute '%s'" % key)
      
-     def __setattr__(self, key, value):
+    def __setattr__(self, key, value):
         self[key] = value
         
-     def getValue(self, key):
+    def getValue(self, key):
         return getattr(self, key, None)
         
     def getValueOrDefault(self, key):
@@ -166,7 +166,8 @@ class Model(dict, metaclass=ModelMetaclass):
             field = self.__mappings__[key]
             if field.default is not None:
                 value = field.default() if callable(field.default) else field.default
-                logging.debug('using default value for %s: %s' % (key, str(value))
+                logging.debug('using default value for %s: %s' % (key, str(value)))
+                setattr(self, key, value)
         return value 
         
     @classmethod
@@ -192,7 +193,7 @@ class Model(dict, metaclass=ModelMetaclass):
                 args.extend(limit)
             else:
                 raise ValueError('Invalid limit value: %s' % str(limit))
-        rs = 'await select( '.join(sql), args)
+        rs = await select(' '.join(sql), args)
         #rs是list，元素是dict，下边把dict赋给cls实例化数据后返回，相当于User（id......）
         return [cls(**r) for r in rs]
         
@@ -215,14 +216,14 @@ class Model(dict, metaclass=ModelMetaclass):
         return cls(**r[0])
         
     async def save(self):
-        args = list(map(self.getValueOrDefault, self.__fields__)
+        args = list(map(self.getValueOrDefault, self.__fields__))
         args.append(self.getValueOrDefault(__primary_key__))
         rows = await execute(self.__insert__, args)
         if rows !=1:
             logging.warning('fail to insert record: affected rows: %s' % rows)
     
     async def update(self):
-        args = list(map(self.getValue, self.__fields__)
+        args = list(map(self.getValue, self.__fields__))
         args.append(self.getValue(self.__primary_key__))
         rows = await execute(self.__update__, args)
         if rows != 1:
