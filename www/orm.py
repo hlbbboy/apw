@@ -180,7 +180,7 @@ class Model(dict, metaclass=ModelMetaclass):
             args = []
         orderby = kw.get('orderby',None)
         if orderby:
-            sql.append('orderby')
+            sql.append('order by')
             sql.append(orderby)
         limit = kw.get('limit', None)
         if limit:

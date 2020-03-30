@@ -72,7 +72,7 @@ async def response_factory(app, handler):
             template = r.get('__template__')
             if template is None:
                 resp = web.Response(body=json.dumps(r, ensure_ascii=False, default=lambda o: o.__dict__).encode('utf-8'))
-                resp.content_type = 'application/json;charset=utf-8'
+                resp.content_type = 'application/json;charset=utf-8' #application/json是一个json对象文件
                 return resp
             else:
                 resp = web.Response(body=app['__templating__'].get_template(template).render(**r).encode('utf-8'))
@@ -105,7 +105,7 @@ def datetime_filter(t):
     
 async def init(loop):
     await orm.create_pool(loop=loop, host='127.0.0.1', port=3306, user='www', password='www', db='awesome')
-    app = web.Application(loop=loop, middlewares=[logger_factory, response_factory])
+    app = web.Application(loop=loop, middlewares=[logger_factory, response_factory]) #middlewares的作用类似装饰器，把列表里的factory装饰到handler上
     init_jinja2(app, filters=dict(datetime=datetime_filter))
     add_routes(app, 'handlers')
     add_static(app)
