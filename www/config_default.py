@@ -7,7 +7,7 @@ Default configurations.
 
 __author__ = 'Han'
 
-config = {
+configs = {
     'debug': True,
     'db':{
         'host': '127.0.0.1',
