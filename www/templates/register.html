@@ -6,12 +6,12 @@
 
 <script>
 
-function validdateEmail(email){
-    var re = /^[a-z0-9\.\-\_]+\@[a-z0-9\-\_]+(\.[a-z0-9\-\_]+){1,4}$;
+function validateEmail(email){
+    var re = /^[a-z0-9\.\-\_]+\@[a-z0-9\-\_]+(\.[a-z0-9\-\_]+){1,4}$/;
     return re.test(email.toLowerCase());
 }
 
-$(function() {
+$(function () {
     var vm = new Vue({//强大的VUE架构，建立数据之间的链接
         el: '#vm',
         data: {
@@ -27,14 +27,14 @@ $(function() {
                 if (! this.name.trim()) {
                     return $form.showFormError('请输入名字');
                 }
-                if (! validdateEmail(this.email.trim().toLowerCase())) {
+                if (! validateEmail(this.email.trim().toLowerCase())) {
                     return $form.showFormError('请输入正确的Email地址');
                 }
-                if (this.password1.lenth < 6) {
+                if (this.password1.length < 6) {
                     return $form.showFormError('口令长度至少为6个字符');
                 }
                 if (this.password1 !== this.password2) {
-                return $form.showFormError('两次输入的口令不一致');
+                    return $form.showFormError('两次输入的口令不一致');
                 }
                 var email = this.email.trim().toLowerCase();
                 $form.postJSON('/api/users', {
@@ -50,7 +50,7 @@ $(function() {
             }
         }
     });
-    //$('#vm').show();//这里为什么有这个show需要测试一下
+    $('#vm').show();//这里为什么有这个show需要测试一下
 });
 
 </script>
@@ -65,7 +65,7 @@ $(function() {
             <div class="uk-alert uk-alert-danger uk-hidden"></div>
             <div class="uk-form-row">
                 <label class="uk-form-label">名字：</label>
-                <div class="ku-form-controls">
+                <div class="uk-form-controls">
                     <input v-model="name" type="text" maxlength="50" placeholder="名字" class="uk-with-1-1">
                 </div>
             </div>
