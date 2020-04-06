@@ -103,7 +103,7 @@ class RequestHandler(object):
                     for k, v in parse.parse_qs(qs, True).items():
                         kw[k] = v[0]
         if kw is None:
-            kw = dict(**request.match_info)
+            kw = dict(**request.match_info)# request.match_info能够得到request中被{}定义的变量名及赋值内容，比如定义/api/{b}，request=/api/1,则match_info 就包括{b:1}
         else:
             if not self._has_var_kw_arg and self._named_kw_args:
                 #remove all unamed kw:
