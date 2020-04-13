@@ -199,7 +199,7 @@ class Model(dict, metaclass=ModelMetaclass):
         
     @classmethod
     async def findNumber(cls, selectField, where=None, args=None):
-        sql = 'select %s _num_ from `%s`' % (selectField, cls.__table__)
+        sql = ['select %s _num_ from `%s`' % (selectField, cls.__table__)]# 把count（ID）的结果存入变量_num_中
         if where:
             sql.append('where')
             sql.append(where)

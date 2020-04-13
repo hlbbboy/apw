@@ -40,7 +40,7 @@ class Page(object):
         >>> p3.limit
         10
         '''
-        self.item_count = item_count #item_count是允许写入的数据量
+        self.item_count = item_count #总共有多少blog
         self.page_size = page_size #page_size是每页可以写入的数据量
         self.page_count = item_count // page_size + (1 if item_count % page_size > 0 else 0) #二者相除得到最多可以有多少页
         if (item_count == 0) or (page_index > self.page_count):
