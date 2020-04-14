@@ -12,7 +12,7 @@ import markdown2
 from aiohttp import web
 
 from coroweb import get, post
-from apis import APIValueError, APIResourceNotFoundError, APIPermissionError, Page
+from apis import APIValueError, APIResourceNotFoundError, APIError, APIPermissionError, Page
 
 from models import User, Comment, Blog, next_id
 from config import configs
@@ -92,10 +92,10 @@ async def index(*, page='1'):
 @get('/blog/{id}')
 async def blog(id):
     blog = await Blog.find(id)
-    comments = await Comment.findAll('blog_id=?', [id], orderby='created_at')
+    comments = await Comment.findAll('blog_id=?', [id], orderBy='created_at')
     for c in comments:
         c.html_content = text2html(c.content)
-    blog.html_content = markdown2.markdown(blog.conment)
+    blog.html_content = markdown2.markdown(blog.content)
     return {
         '__template__': 'blog.html',
         'blog': blog,
@@ -134,7 +134,7 @@ async def authenticate(*, email, passwd):
     # authenticate ok, set cookie
     r = web.Response()
     r.set_cookie(COOKIE_NAME, user2cookie(user, 86400), max_age=86400, httponly=True)
-    user.passwd = '******' # 为什么在这里要给passwd赋值呢？
+    user.passwd = '******' # 为什么在这里要给passwd赋值呢？为了
     r.content_type = 'application/json'
     r.body = json.dumps(user, ensure_ascii=False).encode('utf-8')
     return r

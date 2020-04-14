@@ -314,7 +314,7 @@ function _httpJSON(method, url, data, callback) {
         opt.data = JSON.stringify(data || {});
         opt.contentType = 'application/json';
     }
-    $.ajax(opt).done(function (r) {
+    $.ajax(opt).done(function (r) {//ajax() jQuery方法 实现异步地址请求
         if (r && r.error) {
             return callback(r);
         }

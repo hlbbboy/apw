@@ -178,17 +178,17 @@ class Model(dict, metaclass=ModelMetaclass):
             sql.append(where)
         if args is None:
             args = []
-        orderby = kw.get('orderby',None)
-        if orderby:
+        orderBy = kw.get('orderBy',None)
+        if orderBy:
             sql.append('order by')
-            sql.append(orderby)
+            sql.append(orderBy)
         limit = kw.get('limit', None)
         if limit:
             sql.append('limit')
             if isinstance(limit, int):
                 sql.append('?')
                 args.append(limit) #这里不可以直接把limit给sql，因为参数之间用‘，’号连接，其他sql用‘  ’空格连接，不能用join完成
-            elif isinstance(limit, tuple) and len(limit == 2):
+            elif isinstance(limit, tuple) and len(limit) == 2:
                 sql.append('?, ?')
                 args.extend(limit)
             else:
@@ -210,14 +210,14 @@ class Model(dict, metaclass=ModelMetaclass):
         
     @classmethod
     async def find(cls, pk):
-        rs = await select('%s where `%s`=?' % (cls.__select__, cls.__primary_key__), [kw], 1)
+        rs = await select('%s where `%s`=?' % (cls.__select__, cls.__primary_key__), [pk], 1)
         if len(rs)!=1:
             return None
-        return cls(**r[0])
+        return cls(**rs[0])
         
     async def save(self):
         args = list(map(self.getValueOrDefault, self.__fields__))
-        args.append(self.getValueOrDefault(__primary_key__))
+        args.append(self.getValueOrDefault(self.__primary_key__))
         rows = await execute(self.__insert__, args)
         if rows !=1:
             logging.warning('fail to insert record: affected rows: %s' % rows)
